@@ -724,9 +724,18 @@ class Client {
     }).then(data => {
       // At this point we don't know what `data` actually is!
       // We might gen an empty or falsy result. If so return it as is
-      if (!data) return data; // Handle raw responses
+      // Also handle raw responses
+      if (!data || typeof data == "string" || data instanceof Response) {
+        if (requestOptions.includeResponse) {
+          return {
+            body: data,
+            response
+          };
+        }
 
-      if (typeof data == "string" || data instanceof Response) return data; // Resolve References ------------------------------------------
+        return data;
+      } // Resolve References ------------------------------------------
+
 
       return (async _data => {
         if (_data.resourceType == "Bundle") {

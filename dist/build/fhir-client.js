@@ -1885,9 +1885,18 @@ var Client = /*#__PURE__*/function () {
                 }).then(function (data) {
                   // At this point we don't know what `data` actually is!
                   // We might gen an empty or falsy result. If so return it as is
-                  if (!data) return data; // Handle raw responses
+                  // Also handle raw responses
+                  if (!data || typeof data == "string" || data instanceof Response) {
+                    if (requestOptions.includeResponse) {
+                      return {
+                        body: data,
+                        response: response
+                      };
+                    }
 
-                  if (typeof data == "string" || data instanceof Response) return data; // Resolve References ------------------------------------------
+                    return data;
+                  } // Resolve References ------------------------------------------
+
 
                   return function () {
                     var _ref4 = (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee5(_data) {
