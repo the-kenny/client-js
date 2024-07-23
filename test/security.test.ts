@@ -1,7 +1,7 @@
 // @ts-ignore These tests cannot run without webcrypto
 if (+process.version.replace(/^v/, "").split(".").shift() < 16) return;
 
-global.crypto = require('node:crypto').webcrypto;
+var crypto = require('node:crypto').webcrypto;
 
 import { expect }           from "@hapi/code";
 import { fhirclient }       from "../src/types";
