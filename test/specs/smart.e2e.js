@@ -10,6 +10,8 @@ const path = require("path");
 chai.use(chaiAsPromised);
 chai.should();
 
+const { expect } = chai;
+
 /**
  * NOTE: These variables are NOT used! They are only declared here to avoid lint
  * warnings. Instead, they should exist within the tested window scope at runtime
@@ -278,7 +280,7 @@ describe("authorization", () => {
     });
     
     after(async () => {
-        // browser.end()
+        await browser.end()
         await stopFileServer(ctx)
         await stopMockServer(ctx)
     });
