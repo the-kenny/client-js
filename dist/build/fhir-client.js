@@ -1617,9 +1617,67 @@ var Client = /*#__PURE__*/function () {
                           _context4.next = 15;
                           break;
                         }
-                        if (_this2.getState("tokenResponse.access_token")) {
-                          _context4.next = 4;
-                          break;
+                      }
+                    }, _callee4);
+                  }));
+
+                  return function (_x6) {
+                    return _ref3.apply(this, arguments);
+                  };
+                }()) // Handle 403 ------------------------------------------------------
+                .catch(function (error) {
+                  if (error.status == 403) {
+                    debugRequest("Permission denied! Please make sure that you have requested the proper scopes.");
+                  }
+
+                  throw error;
+                }).then(function (data) {
+                  // At this point we don't know what `data` actually is!
+                  // We might gen an empty or falsy result. If so return it as is
+                  // Also handle raw responses
+                  if (!data || typeof data == "string" || data instanceof Response) {
+                    if (requestOptions.includeResponse) {
+                      return {
+                        body: data,
+                        response: response
+                      };
+                    }
+
+                    return data;
+                  } // Resolve References ------------------------------------------
+
+
+                  return function () {
+                    var _ref4 = (0, _asyncToGenerator2.default)( /*#__PURE__*/_regenerator.default.mark(function _callee5(_data) {
+                      return _regenerator.default.wrap(function _callee5$(_context5) {
+                        while (1) {
+                          switch (_context5.prev = _context5.next) {
+                            case 0:
+                              if (!(_data.resourceType == "Bundle")) {
+                                _context5.next = 5;
+                                break;
+                              }
+
+                              _context5.next = 3;
+                              return Promise.all((_data.entry || []).map(function (item) {
+                                return resolveRefs(item.resource, options, _resolvedRefs, _this2, signal);
+                              }));
+
+                            case 3:
+                              _context5.next = 7;
+                              break;
+
+                            case 5:
+                              _context5.next = 7;
+                              return resolveRefs(_data, options, _resolvedRefs, _this2, signal);
+
+                            case 7:
+                              return _context5.abrupt("return", _data);
+
+                            case 8:
+                            case "end":
+                              return _context5.stop();
+                          }
                         }
                         error.message += "\nThis app cannot be accessed directly. Please launch it as SMART app!";
                         throw error;

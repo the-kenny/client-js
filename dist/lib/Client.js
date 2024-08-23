@@ -608,10 +608,19 @@ class Client {
     }).then(data => {
       // At this point we don't know what `data` actually is!
       // We might gen an empty or falsy result. If so return it as is
-      if (!data) return data;
-      // Handle raw responses
-      if (typeof data == "string" || data instanceof Response) return data;
-      // Resolve References ------------------------------------------
+      // Also handle raw responses
+      if (!data || typeof data == "string" || data instanceof Response) {
+        if (requestOptions.includeResponse) {
+          return {
+            body: data,
+            response
+          };
+        }
+
+        return data;
+      } // Resolve References ------------------------------------------
+
+
       return (async _data => {
         if (_data.resourceType == "Bundle") {
           await Promise.all((_data.entry || []).map(item => resolveRefs(item.resource, options, _resolvedRefs, this, signal)));

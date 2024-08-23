@@ -878,13 +878,17 @@ export default class Client
                 // At this point we don't know what `data` actually is!
 
                 // We might gen an empty or falsy result. If so return it as is
-                if (!data)
+                // Also handle raw responses
+                if (!data || typeof data == "string" || data instanceof Response) {
+                    if ((requestOptions as fhirclient.FetchOptions).includeResponse) {
+                        return {
+                            body: data,
+                            response
+                        }
+                    }
                     return data;
+                }
                 
-                // Handle raw responses
-                if (typeof data == "string" || data instanceof Response)
-                    return data;
-
                 // Resolve References ------------------------------------------
                 return (async (_data: fhirclient.FHIR.Resource) => {
 
