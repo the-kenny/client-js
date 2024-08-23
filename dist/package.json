@@ -29,10 +29,10 @@
   },
   "peerDependencies": {
     "@types/hapi": ">=18",
-    "@types/node": ">=14"
+    "@types/node": ">=18"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   },
   "browserslist": [
     "last 2 Chrome versions",

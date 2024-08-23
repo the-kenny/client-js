@@ -62,7 +62,7 @@
     "@types/jsonwebtoken": "^8.5.1",
     "@types/mocha": "^9.1.1",
     "@types/nightwatch": "^2.3.0",
-    "@types/node": "^16.9.1",
+    "@types/node": "^18.19.45",
     "babel-loader": "^8.2.5",
     "babel-polyfill": "^6.26.0",
     "chai": "^4.3.6",
@@ -85,7 +85,7 @@
     "webpack-merge": "^5.8.0"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
