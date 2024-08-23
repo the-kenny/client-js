@@ -3,6 +3,7 @@ import { expect }     from "@hapi/code";
 import * as Lab       from "@hapi/lab";
 import * as FS        from "fs";
 import * as jwt       from "jsonwebtoken"
+import { Response }   from "cross-fetch";
 import mockDebug      from "./mocks/mockDebug";
 import mockServer     from "./mocks/mockServer";
 import ServerEnv      from "./mocks/ServerEnvironment";
@@ -3948,6 +3949,88 @@ describe("FHIR.client", () => {
                 }
             });
         });
+
+        it ("update with text body and includeResponse = true", async () => {
+            const env    = new BrowserEnv()
+            const client = new Client(env, mockUrl);
+
+            mockServer.mock({
+                status: 200,
+                body: "text",
+                headers: { "content-type": "text/plain" }
+            });
+
+            let result: any = await client.update({}, { includeResponse: true });
+
+            expect(result.body).to.equal("text");
+            expect(result.response).to.exist();
+            expect(result.response.status).to.equal(200);
+        })
+
+        it ("update with text body and includeResponse = false", async () => {
+            const env    = new BrowserEnv()
+            const client = new Client(env, mockUrl);
+
+            mockServer.mock({
+                status: 200,
+                body: "text",
+                headers: { "content-type": "text/plain" }
+            });
+            
+            let result: any = await client.update({});
+            expect(result).to.equal("text");
+        })
+
+        it ("update with empty body and includeResponse = true", async () => {
+            const env    = new BrowserEnv()
+            const client = new Client(env, mockUrl);
+            
+            mockServer.mock({
+                status: 200,
+                body  : "",
+                headers: { "content-type": "application/json" }
+            });
+            
+            let result: any = await client.update({}, { includeResponse: true });
+
+            expect(result.body).to.equal("");
+            expect(result.response).to.exist();
+            expect(result.response.status).to.equal(200);
+        })
+
+        it ("update with falsy body and includeResponse = true", async () => {
+            const env    = new BrowserEnv()
+            const client = new Client(env, mockUrl);
+            
+            mockServer.mock({
+                status: 200,
+                body  : "null",
+                headers: { "content-type": "application/json" }
+            });
+            
+            let result: any = await client.update({}, { includeResponse: true });
+
+            expect(result.body).to.equal(null);
+            expect(result.response).to.exist();
+            expect(result.response.status).to.equal(200);
+        })
+
+        it ("update with Response body and includeResponse = true", async () => {
+            const env    = new BrowserEnv()
+            const client = new Client(env, mockUrl);
+            
+            mockServer.mock({
+                status: 200,
+                body  : new Response(),
+                headers: { "content-type": "application/json" }
+            });
+            
+            let result: any = await client.update({}, { includeResponse: true });
+
+            expect(result.body).to.exist();
+            expect(result.response).to.exist();
+            expect(result.response.status).to.equal(200);
+        })
     });
 
     describe("delete", () => {
