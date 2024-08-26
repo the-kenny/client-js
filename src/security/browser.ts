@@ -7,15 +7,15 @@ const crypto: Crypto = typeof globalThis === "object" && globalThis.crypto ?
     require("isomorphic-webcrypto").default;
 
 const subtle = () => {
-    if (!window.isSecureContext) {
-        throw new Error(
-            "Some of the required subtle crypto functionality is not " +
-            "available unless you run this app in secure context (using " +
-            "HTTPS or running locally). See " +
-            "https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts"
-        )
-    }
     if (!crypto.subtle) {
+        if (!globalThis.isSecureContext) {
+            throw new Error(
+                "Some of the required subtle crypto functionality is not " +
+                "available unless you run this app in secure context (using " +
+                "HTTPS or running locally). See " +
+                "https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts"
+            )
+        }
         throw new Error(
             "Some of the required subtle crypto functionality is not " +
             "available in the current environment (no crypto.subtle)"
