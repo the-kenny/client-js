@@ -551,7 +551,7 @@ describe("authorization", () => {
                 scope     : "patient/*.rs",
                 pkceMode  : "required"
             }, { ...MOCK_WELL_KNOWN_JSON, code_challenge_methods_supported: [] }),
-            "Required PKCE code challenge method (`S256`) was not found."
+            /Required PKCE code challenge method \(`S256`\) was not found/
         );
     });
 
@@ -562,7 +562,7 @@ describe("authorization", () => {
                 scope     : "patient/*.rs",
                 pkceMode  : "required"
             }, null),
-            "Required PKCE code challenge method (`S256`) was not found."
+            /Required PKCE code challenge method \(`S256`\) was not found/
         );
     });
 
