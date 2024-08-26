@@ -70,7 +70,6 @@ function crossPlatformTest(callback: (env: Adapter) => void) {
         "works on the server" : new ServerEnv({ session: {} })
     };
 
-    // tslint:disable-next-line:forin
     for (const name in tests) {
         it (name, () => callback(tests[name]));
     }
@@ -1027,7 +1026,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -1049,7 +1047,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -1071,7 +1068,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -1092,7 +1088,7 @@ describe("FHIR.client", () => {
                 "works in the browser": new BrowserEnv(),
                 "works on the server" : new ServerEnv()
             };
-            // tslint:disable-next-line:forin
+
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -1114,7 +1110,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -2769,7 +2764,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -2923,7 +2917,6 @@ describe("FHIR.client", () => {
                 "works on the server" : new ServerEnv()
             };
 
-            // tslint:disable-next-line:forin
             for (const name in tests) {
                 it (name, async () => {
                     const client = new Client(tests[name], { serverUrl: mockUrl });
@@ -2932,6 +2925,7 @@ describe("FHIR.client", () => {
                         url: "/Patient/patient-id",
                         includeResponse: true
                     });
+                    // @ts-ignore
                     expect(result.body).to.include({ id: "patient-id" });
                     expect(result.response.status).to.equal(200);
                 });
@@ -3052,7 +3046,7 @@ describe("FHIR.client", () => {
 
                 expect(result.response.status).to.equal(200);
                 expect(result.response.headers.get("x-custom")).to.equal("test");
-                expect(result.body).to.equal([
+                expect(result.body as any).to.equal([
                     {
                         resourceType: "Bundle",
                         pageId: 1,

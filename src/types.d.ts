@@ -4,7 +4,6 @@ import Client from "./Client";
 import { getPath, byCodes, byCode } from "./lib";
 import { IncomingMessage } from "http";
 
-// tslint:disable-next-line: no-namespace
 declare namespace fhirclient {
 
     interface RequestWithSession extends IncomingMessage {
