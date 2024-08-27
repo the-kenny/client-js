@@ -901,7 +901,7 @@ export default class Client
                             options,
                             _resolvedRefs,
                             this,
-                            requestOptions
+                            requestOptions as fhirclient.RequestOptions
                         )));
                     }
                     else {
@@ -910,7 +910,7 @@ export default class Client
                             options,
                             _resolvedRefs,
                             this,
-                            requestOptions
+                            requestOptions as fhirclient.RequestOptions
                         );
                     }
 
