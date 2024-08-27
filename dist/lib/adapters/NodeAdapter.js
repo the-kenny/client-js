@@ -47,7 +47,7 @@ class NodeAdapter {
     let host = req.headers.host;
     if (req.headers["x-forwarded-host"]) {
       host = req.headers["x-forwarded-host"];
-      if (req.headers["x-forwarded-port"]) {
+      if (req.headers["x-forwarded-port"] && host.indexOf(":") === -1) {
         host += ":" + req.headers["x-forwarded-port"];
       }
     }

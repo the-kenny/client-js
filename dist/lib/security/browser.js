@@ -1,13 +1,20 @@
 "use strict";
 
-require("core-js/modules/es.typed-array.set.js");
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.signCompactJws = exports.importJWK = exports.generatePKCEChallenge = exports.digestSha256 = exports.randomBytes = void 0;
 const js_base64_1 = require("js-base64");
 const crypto = typeof globalThis === "object" && globalThis.crypto ? globalThis.crypto : require("isomorphic-webcrypto").default;
-const subtle = crypto.subtle;
+const subtle = () => {
+  if (!crypto.subtle) {
+    if (!globalThis.isSecureContext) {
+      throw new Error("Some of the required subtle crypto functionality is not " + "available unless you run this app in secure context (using " + "HTTPS or running locally). See " + "https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts");
+    }
+    throw new Error("Some of the required subtle crypto functionality is not " + "available in the current environment (no crypto.subtle)");
+  }
+  return crypto.subtle;
+};
 const ALGS = {
   ES384: {
     name: "ECDSA",
@@ -28,7 +35,7 @@ function randomBytes(count) {
 exports.randomBytes = randomBytes;
 async function digestSha256(payload) {
   const prepared = new TextEncoder().encode(payload);
-  const hash = await subtle.digest('SHA-256', prepared);
+  const hash = await subtle().digest('SHA-256', prepared);
   return new Uint8Array(hash);
 }
 exports.digestSha256 = digestSha256;
@@ -59,7 +66,7 @@ async function importJWK(jwk) {
     throw new Error('The "key_ops" property of the JWK does not contain "sign"');
   }
   try {
-    return await subtle.importKey("jwk", jwk, ALGS[jwk.alg], jwk.ext === true, jwk.key_ops // || ['sign']
+    return await subtle().importKey("jwk", jwk, ALGS[jwk.alg], jwk.ext === true, jwk.key_ops // || ['sign']
     );
   } catch (e) {
     throw new Error(`The ${jwk.alg} is not supported by this browser: ${e}`);
@@ -72,7 +79,7 @@ async function signCompactJws(alg, privateKey, header, payload) {
   }));
   const jwtPayload = JSON.stringify(payload);
   const jwtAuthenticatedContent = `${(0, js_base64_1.encodeURL)(jwtHeader)}.${(0, js_base64_1.encodeURL)(jwtPayload)}`;
-  const signature = await subtle.sign(Object.assign(Object.assign({}, privateKey.algorithm), {
+  const signature = await subtle().sign(Object.assign(Object.assign({}, privateKey.algorithm), {
     hash: 'SHA-384'
   }), privateKey, new TextEncoder().encode(jwtAuthenticatedContent));
   return `${jwtAuthenticatedContent}.${(0, js_base64_1.fromUint8Array)(new Uint8Array(signature), true)}`;

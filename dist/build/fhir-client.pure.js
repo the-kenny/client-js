@@ -54,17 +54,22 @@ async function contextualize(requestOptions, client) {
  * @param refId
  * @param cache A map to store the resolved refs
  * @param client The client instance
- * @param [signal] The `AbortSignal` if any
+ * @param requestOptions Only signal and headers are currently used if provided
  * @returns The resolved reference
  * @private
  */
-function getRef(refId, cache, client, signal) {
+function getRef(refId, cache, client, requestOptions) {
   if (!cache[refId]) {
+    const {
+      signal,
+      headers
+    } = requestOptions;
     // Note that we set cache[refId] immediately! When the promise is
     // settled it will be updated. This is to avoid a ref being fetched
     // twice because some of these requests are executed in parallel.
     cache[refId] = client.request({
       url: refId,
+      headers,
       signal
     }).then(res => {
       cache[refId] = res;
@@ -80,14 +85,14 @@ function getRef(refId, cache, client, signal) {
  * Resolves a reference in the given resource.
  * @param obj FHIR Resource
  */
-function resolveRef(obj, path, graph, cache, client, signal) {
+function resolveRef(obj, path, graph, cache, client, requestOptions) {
   const node = (0, lib_1.getPath)(obj, path);
   if (node) {
     const isArray = Array.isArray(node);
     return Promise.all((0, lib_1.makeArray)(node).filter(Boolean).map((item, i) => {
       const ref = item.reference;
       if (ref) {
-        return getRef(ref, cache, client, signal).then(sub => {
+        return getRef(ref, cache, client, requestOptions).then(sub => {
           if (graph) {
             if (isArray) {
               if (path.indexOf("..") > -1) {
@@ -117,7 +122,7 @@ function resolveRef(obj, path, graph, cache, client, signal) {
  * @param client The client instance
  * @private
  */
-function resolveRefs(obj, fhirOptions, cache, client, signal) {
+function resolveRefs(obj, fhirOptions, cache, client, requestOptions) {
   // 1. Sanitize paths, remove any invalid ones
   let paths = (0, lib_1.makeArray)(fhirOptions.resolveReferences).filter(Boolean) // No false, 0, null, undefined or ""
   .map(path => String(path).trim()).filter(Boolean); // No space-only strings
@@ -150,7 +155,7 @@ function resolveRefs(obj, fhirOptions, cache, client, signal) {
   Object.keys(groups).sort().forEach(len => {
     const group = groups[len];
     task = task.then(() => Promise.all(group.map(path => {
-      return resolveRef(obj, path, !!fhirOptions.graph, cache, client, signal);
+      return resolveRef(obj, path, !!fhirOptions.graph, cache, client, requestOptions);
     })));
   });
   return task;
@@ -629,7 +634,7 @@ class Client {
       throw error;
     }).then(data => {
       // At this point we don't know what `data` actually is!
-      // We might gen an empty or falsy result. If so return it as is
+      // We might get an empty or falsy result. If so return it as is
       // Also handle raw responses
       if (!data || typeof data == "string" || data instanceof Response) {
         if (requestOptions.includeResponse) {
@@ -638,16 +643,14 @@ class Client {
             response
           };
         }
-
         return data;
-      } // Resolve References ------------------------------------------
-
-
+      }
+      // Resolve References ------------------------------------------
       return (async _data => {
         if (_data.resourceType == "Bundle") {
-          await Promise.all((_data.entry || []).map(item => resolveRefs(item.resource, options, _resolvedRefs, this, signal)));
+          await Promise.all((_data.entry || []).map(item => resolveRefs(item.resource, options, _resolvedRefs, this, requestOptions)));
         } else {
-          await resolveRefs(_data, options, _resolvedRefs, this, signal);
+          await resolveRefs(_data, options, _resolvedRefs, this, requestOptions);
         }
         return _data;
       })(data)
@@ -1744,7 +1747,15 @@ Object.defineProperty(exports, "__esModule", ({
 exports.signCompactJws = exports.importJWK = exports.generatePKCEChallenge = exports.digestSha256 = exports.randomBytes = void 0;
 const js_base64_1 = __webpack_require__(/*! js-base64 */ "./node_modules/js-base64/base64.js");
 const crypto = typeof globalThis === "object" && globalThis.crypto ? globalThis.crypto : (__webpack_require__(/*! isomorphic-webcrypto */ "./node_modules/isomorphic-webcrypto/src/browser.mjs")["default"]);
-const subtle = crypto.subtle;
+const subtle = () => {
+  if (!crypto.subtle) {
+    if (!globalThis.isSecureContext) {
+      throw new Error("Some of the required subtle crypto functionality is not " + "available unless you run this app in secure context (using " + "HTTPS or running locally). See " + "https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts");
+    }
+    throw new Error("Some of the required subtle crypto functionality is not " + "available in the current environment (no crypto.subtle)");
+  }
+  return crypto.subtle;
+};
 const ALGS = {
   ES384: {
     name: "ECDSA",
@@ -1765,7 +1776,7 @@ function randomBytes(count) {
 exports.randomBytes = randomBytes;
 async function digestSha256(payload) {
   const prepared = new TextEncoder().encode(payload);
-  const hash = await subtle.digest('SHA-256', prepared);
+  const hash = await subtle().digest('SHA-256', prepared);
   return new Uint8Array(hash);
 }
 exports.digestSha256 = digestSha256;
@@ -1796,7 +1807,7 @@ async function importJWK(jwk) {
     throw new Error('The "key_ops" property of the JWK does not contain "sign"');
   }
   try {
-    return await subtle.importKey("jwk", jwk, ALGS[jwk.alg], jwk.ext === true, jwk.key_ops // || ['sign']
+    return await subtle().importKey("jwk", jwk, ALGS[jwk.alg], jwk.ext === true, jwk.key_ops // || ['sign']
     );
   } catch (e) {
     throw new Error(`The ${jwk.alg} is not supported by this browser: ${e}`);
@@ -1810,7 +1821,7 @@ async function signCompactJws(alg, privateKey, header, payload) {
   });
   const jwtPayload = JSON.stringify(payload);
   const jwtAuthenticatedContent = `${(0, js_base64_1.encodeURL)(jwtHeader)}.${(0, js_base64_1.encodeURL)(jwtPayload)}`;
-  const signature = await subtle.sign({
+  const signature = await subtle().sign({
     ...privateKey.algorithm,
     hash: 'SHA-384'
   }, privateKey, new TextEncoder().encode(jwtAuthenticatedContent));
@@ -2189,7 +2200,7 @@ function shouldIncludeChallenge(S256supported, pkceMode) {
   }
   if (pkceMode === "required") {
     if (!S256supported) {
-      throw new Error("Required PKCE code challenge method (`S256`) was not found.");
+      throw new Error("Required PKCE code challenge method (`S256`) was not found in the server's codeChallengeMethods declaration.");
     }
     return true;
   }
@@ -2718,6 +2729,8 @@ function useColors() {
 		return false;
 	}
 
+	let m;
+
 	// Is webkit? http://stackoverflow.com/a/16459606/376773
 	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
 	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
@@ -2725,7 +2738,7 @@ function useColors() {
 		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
 		// Is firefox >= v31?
 		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31) ||
+		(typeof navigator !== 'undefined' && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31) ||
 		// Double check webkit in userAgent just in case we are in a worker
 		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
 }
@@ -3178,13 +3191,11 @@ module.exports = setup;
      *
      * @author Dan Kogai (https://github.com/dankogai)
      */
-    var version = '3.7.2';
+    var version = '3.7.7';
     /**
      * @deprecated use lowercase `version`.
      */
     var VERSION = version;
-    var _hasatob = typeof atob === 'function';
-    var _hasbtoa = typeof btoa === 'function';
     var _hasBuffer = typeof Buffer === 'function';
     var _TD = typeof TextDecoder === 'function' ? new TextDecoder() : undefined;
     var _TE = typeof TextEncoder === 'function' ? new TextEncoder() : undefined;
@@ -3199,10 +3210,7 @@ module.exports = setup;
     var _fromCC = String.fromCharCode.bind(String);
     var _U8Afrom = typeof Uint8Array.from === 'function'
         ? Uint8Array.from.bind(Uint8Array)
-        : function (it, fn) {
-            if (fn === void 0) { fn = function (x) { return x; }; }
-            return new Uint8Array(Array.prototype.slice.call(it, 0).map(fn));
-        };
+        : function (it) { return new Uint8Array(Array.prototype.slice.call(it, 0)); };
     var _mkUriSafe = function (src) { return src
         .replace(/=/g, '').replace(/[+\/]/g, function (m0) { return m0 == '+' ? '-' : '_'; }); };
     var _tidyB64 = function (s) { return s.replace(/[^A-Za-z0-9\+\/]/g, ''); };
@@ -3231,7 +3239,7 @@ module.exports = setup;
      * @param {String} bin binary string
      * @returns {string} Base64-encoded string
      */
-    var _btoa = _hasbtoa ? function (bin) { return btoa(bin); }
+    var _btoa = typeof btoa === 'function' ? function (bin) { return btoa(bin); }
         : _hasBuffer ? function (bin) { return Buffer.from(bin, 'binary').toString('base64'); }
             : btoaPolyfill;
     var _fromUint8Array = _hasBuffer
@@ -3360,13 +3368,13 @@ module.exports = setup;
      * @param {String} asc Base64-encoded string
      * @returns {string} binary string
      */
-    var _atob = _hasatob ? function (asc) { return atob(_tidyB64(asc)); }
+    var _atob = typeof atob === 'function' ? function (asc) { return atob(_tidyB64(asc)); }
         : _hasBuffer ? function (asc) { return Buffer.from(asc, 'base64').toString('binary'); }
             : atobPolyfill;
     //
     var _toUint8Array = _hasBuffer
         ? function (a) { return _U8Afrom(Buffer.from(a, 'base64')); }
-        : function (a) { return _U8Afrom(_atob(a), function (c) { return c.charCodeAt(0); }); };
+        : function (a) { return _U8Afrom(_atob(a).split('').map(function (c) { return c.charCodeAt(0); })); };
     /**
      * converts a Base64 string to a Uint8Array.
      */

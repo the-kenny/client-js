@@ -44,17 +44,22 @@ async function contextualize(requestOptions, client) {
  * @param refId
  * @param cache A map to store the resolved refs
  * @param client The client instance
- * @param [signal] The `AbortSignal` if any
+ * @param requestOptions Only signal and headers are currently used if provided
  * @returns The resolved reference
  * @private
  */
-function getRef(refId, cache, client, signal) {
+function getRef(refId, cache, client, requestOptions) {
   if (!cache[refId]) {
+    const {
+      signal,
+      headers
+    } = requestOptions;
     // Note that we set cache[refId] immediately! When the promise is
     // settled it will be updated. This is to avoid a ref being fetched
     // twice because some of these requests are executed in parallel.
     cache[refId] = client.request({
       url: refId,
+      headers,
       signal
     }).then(res => {
       cache[refId] = res;
@@ -70,14 +75,14 @@ function getRef(refId, cache, client, signal) {
  * Resolves a reference in the given resource.
  * @param obj FHIR Resource
  */
-function resolveRef(obj, path, graph, cache, client, signal) {
+function resolveRef(obj, path, graph, cache, client, requestOptions) {
   const node = (0, lib_1.getPath)(obj, path);
   if (node) {
     const isArray = Array.isArray(node);
     return Promise.all((0, lib_1.makeArray)(node).filter(Boolean).map((item, i) => {
       const ref = item.reference;
       if (ref) {
-        return getRef(ref, cache, client, signal).then(sub => {
+        return getRef(ref, cache, client, requestOptions).then(sub => {
           if (graph) {
             if (isArray) {
               if (path.indexOf("..") > -1) {
@@ -107,7 +112,7 @@ function resolveRef(obj, path, graph, cache, client, signal) {
  * @param client The client instance
  * @private
  */
-function resolveRefs(obj, fhirOptions, cache, client, signal) {
+function resolveRefs(obj, fhirOptions, cache, client, requestOptions) {
   // 1. Sanitize paths, remove any invalid ones
   let paths = (0, lib_1.makeArray)(fhirOptions.resolveReferences).filter(Boolean) // No false, 0, null, undefined or ""
   .map(path => String(path).trim()).filter(Boolean); // No space-only strings
@@ -140,7 +145,7 @@ function resolveRefs(obj, fhirOptions, cache, client, signal) {
   Object.keys(groups).sort().forEach(len => {
     const group = groups[len];
     task = task.then(() => Promise.all(group.map(path => {
-      return resolveRef(obj, path, !!fhirOptions.graph, cache, client, signal);
+      return resolveRef(obj, path, !!fhirOptions.graph, cache, client, requestOptions);
     })));
   });
   return task;
@@ -607,7 +612,7 @@ class Client {
       throw error;
     }).then(data => {
       // At this point we don't know what `data` actually is!
-      // We might gen an empty or falsy result. If so return it as is
+      // We might get an empty or falsy result. If so return it as is
       // Also handle raw responses
       if (!data || typeof data == "string" || data instanceof Response) {
         if (requestOptions.includeResponse) {
@@ -616,16 +621,14 @@ class Client {
             response
           };
         }
-
         return data;
-      } // Resolve References ------------------------------------------
-
-
+      }
+      // Resolve References ------------------------------------------
       return (async _data => {
         if (_data.resourceType == "Bundle") {
-          await Promise.all((_data.entry || []).map(item => resolveRefs(item.resource, options, _resolvedRefs, this, signal)));
+          await Promise.all((_data.entry || []).map(item => resolveRefs(item.resource, options, _resolvedRefs, this, requestOptions)));
         } else {
-          await resolveRefs(_data, options, _resolvedRefs, this, signal);
+          await resolveRefs(_data, options, _resolvedRefs, this, requestOptions);
         }
         return _data;
       })(data)

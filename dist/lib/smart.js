@@ -311,7 +311,7 @@ function shouldIncludeChallenge(S256supported, pkceMode) {
   }
   if (pkceMode === "required") {
     if (!S256supported) {
-      throw new Error("Required PKCE code challenge method (`S256`) was not found.");
+      throw new Error("Required PKCE code challenge method (`S256`) was not found in the server's codeChallengeMethods declaration.");
     }
     return true;
   }
