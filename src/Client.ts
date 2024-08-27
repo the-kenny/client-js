@@ -880,7 +880,7 @@ export default class Client
 
                 // At this point we don't know what `data` actually is!
 
-                // We might gen an empty or falsy result. If so return it as is
+                // We might get an empty or falsy result. If so return it as is
                 // Also handle raw responses
                 if (!data || typeof data == "string" || data instanceof Response) {
                     if ((requestOptions as fhirclient.FetchOptions).includeResponse) {
