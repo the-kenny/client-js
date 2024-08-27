@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.5.4
+- Fixed double port issue preventing this library from working with NextJs - #186
+- The `includeResponse` now works for update requests with empty response - #162
+- Fixed some CVEs - #185
+- Upgraded most dev dependencies to their latest usable version
+- Detect if the app is running without a secure context and throw an error to complain about it - #183
+- Custom headers are now propagated to sub-requests for resolving references - #184
+
 ## v2.5.3
 - [non-functional] Created bug and feature issue templates in #177
 - Added logic for using patientId & clientId URL parameters in calls to `smart.authorize` in #178
