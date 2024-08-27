@@ -1651,9 +1651,7 @@ describe("FHIR.client", () => {
 
         describe ("can resolve nested refs", () => {
             crossPlatformTest(async (env) => {
-                const client = new Client(env, {
-                    serverUrl: mockUrl
-                });
+                const client = new Client(env, { serverUrl: mockUrl });
 
                 // This is how the user had defined the list, If it works properly,
                 // the request function should resolve them in different order:
@@ -1665,49 +1663,57 @@ describe("FHIR.client", () => {
                     "encounter"
                 ];
 
+                function createHandler(json) {
+                    return function handler(req, res, next) {
+                        try {
+                            expect(req.headers['x-custom-header'], "Custom headers not sent on ref requests").to.equal('someCustomKey');
+                            res.json(json)
+                        } catch (ex) {
+                            next(ex)
+                        }
+                    }
+                }
+
                 // 1. Observation
                 // this request should be sent first!
                 mockServer.mock({
-                    headers: { "content-type": "application/json" },
-                    status: 200,
-                    body: {
+                    handler: createHandler({
                         resourceType: "Observation",
                         encounter: { reference: "encounter/1" },
                         subject: { reference: "subject/1" }
-                    }
+                    })
                 });
 
                 // 2. Patient (Observation.subject)
                 // this request should be sent second (even though it might
                 // reply after #3)
                 mockServer.mock({
-                    headers: { "content-type": "application/json" },
-                    status: 200,
-                    body: { resourceType: "Patient" }
+                    handler: createHandler({ resourceType: "Patient" })
                 });
 
                 // 3. Encounter
                 // this request should be sent third (even though it might
                 // reply before #2)
                 mockServer.mock({
-                    headers: { "content-type": "application/json" },
-                    status: 200,
-                    body: {
+                    handler: createHandler({
                         resourceType: "Encounter",
                         serviceProvider: { reference: "Organization/1" }
-                    }
+                    })
                 });
 
                 // 4. Organization (Encounter.serviceProvider)
                 // this request should be sent AFTER we have handled the response
                 // from #3!
                 mockServer.mock({
-                    headers: { "content-type": "application/json" },
-                    status: 200,
-                    body: { resourceType: "Organization" }
+                    handler: createHandler({ resourceType: "Organization" })
                 });
 
-                const result = await client.request("Observation/id", {
+                const result = await client.request({
+                    url: "Observation/id",
+                    headers: {
+                        'X-Custom-Header': 'someCustomKey',
+                    }
+                }, {
                     resolveReferences: refsToResolve
                 });
 

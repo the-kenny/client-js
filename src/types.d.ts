@@ -338,7 +338,7 @@ declare namespace fhirclient {
         /**
          * Supported PKCE Code challenge methods
          */
-         codeChallengeMethods: string[];
+        codeChallengeMethods: string[];
     }
 
     /**
